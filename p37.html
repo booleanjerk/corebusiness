@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P37 - Minimalist Metronome</title>
+    <title>p37</title>
     <style>
         :root {
             --bg: #ffffff;
@@ -137,6 +137,27 @@
             border: 1px solid #eaeaea;
             border-radius: 4px;
         }
+
+        @media (max-width: 768px) {
+    .metro-core {
+        max-width: 100%; /* Use full container widths on smaller devices */
+    }
+    .bpm-value {
+        font-size: 2.8rem; /* Drop value size slightly on compact screens */
+    }
+}
+
+/* Handles landscape rotation issues on phones */
+@media (max-height: 500px) {
+    .container {
+        flex-direction: row; /* Put side-by-side if display is short and wide */
+        gap: 20px;
+        align-items: center;
+    }
+    .image-viewport img {
+        max-height: calc(100vh - 60px);
+    }
+}
     </style>
 </head>
 <body>

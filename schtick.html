@@ -45,10 +45,11 @@
         }
 
         .container {
-            width: 100%;
-            max-width: 760px;
-            text-align: center;
-        }
+    width: 100%;
+    max-width: 760px;
+    text-align: center;
+    padding-top: 40px; /* Space for back button on mobile */
+}
 
         .controls {
             display: flex;
@@ -187,6 +188,21 @@
             letter-spacing: 2px;
             color: var(--text-light);
         }
+
+        @media (max-width: 600px) {
+    .controls {
+        flex-wrap: wrap; /* Wraps inputs cleanly on thin viewports */
+        gap: 12px;
+    }
+    .pattern-row {
+        font-size: 1.2rem; /* Shrinks text slightly so long RLRR sequences fit */
+        letter-spacing: 1px;
+        word-spacing: 4px;
+    }
+    .pattern-row.muted {
+        font-size: 1rem;
+    }
+}
     </style>
 </head>
 <body>
