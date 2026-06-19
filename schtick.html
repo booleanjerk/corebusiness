@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stick Control</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text-dark: #111111;
+            --text-light: #aaaaaa;
+            --accent: #000000;
+            --row-height: 80px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* --- SUBTLE BACK BUTTON --- */
+        .back-btn {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            text-decoration: none;
+            transition: color 0.15s ease;
+            font-weight: 400;
+        }
+
+        .back-btn:hover {
+            color: var(--text-dark);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 760px;
+            text-align: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .duration-display {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 45px;
+        }
+
+        input, select, button {
+            font-family: inherit;
+            background: none;
+            border: 1px solid #e0e0e0;
+            color: var(--text-dark);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        input[type="number"] {
+            width: 60px;
+            text-align: center;
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: 500;
+            padding: 6px 20px;
+            transition: all 0.15s ease;
+        }
+
+        #startBtn {
+            border: 1px solid var(--text-dark);
+            background: var(--text-dark);
+            color: var(--bg);
+        }
+
+        #startBtn:hover {
+            background: #333;
+        }
+
+        #startBtn.playing {
+            background: #ff3b30;
+            border-color: #ff3b30;
+            color: white;
+        }
+
+        #resetBtn {
+            border: 1px solid #e0e0e0;
+            background: transparent;
+            color: var(--text-dark);
+        }
+
+        #resetBtn:hover {
+            background: #f5f5f5;
+            border-color: #cccccc;
+        }
+
+        /* --- THREE-LINE VIEWPORT --- */
+        .viewport {
+            position: relative;
+            height: calc(var(--row-height) * 3);
+            overflow: hidden;
+            margin: 40px auto;
+            width: 100%;
+        }
+
+        .viewport::before, .viewport::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: #eaeaea;
+            z-index: 2;
+        }
+        .viewport::before { top: var(--row-height); }
+        .viewport::after { top: calc(var(--row-height) * 2); }
+
+        .scroller-strip {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            transform: translateY(0px);
+            transition: transform 0s linear;
+        }
+
+        .pattern-row {
+            height: var(--row-height);
+            line-height: var(--row-height);
+            font-size: 2rem;
+            font-weight: 400;
+            letter-spacing: 2px;
+            word-spacing: 8px;
+            white-space: nowrap;
+            transition: color 0.15s ease;
+        }
+
+        .pattern-row.muted {
+            color: var(--text-light);
+            font-size: 1.8rem;
+        }
+
+        .pattern-row.counting {
+            color: #34c759 !important;
+            font-weight: 600;
+        }
+
+        .tracker {
+            margin-top: 30px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-light);
+        }
+    </style>
+</head>
+<body>
+
+<a href="index.html" class="back-btn">&larr; back</a>
+
+<div class="container">
+    <div class="controls">
+        <div class="control-group">
+            <label for="bpm">BPM</label>
+            <input type="number" id="bpm" value="100" min="40" max="250">
+        </div>
+        
+        <div class="control-group">
+            <label for="loops">Repeats</label>
+            <select id="loops">
+                <option value="1">1x (8 Clicks)</option>
+                <option value="2" selected>2x (16 Clicks)</option>
+                <option value="4">4x (32 Clicks)</option>
+                <option value="8">8x (64 Clicks)</option>
+                <option value="16">16x (128 Clicks)</option>
+            </select>
+        </div>
+
+        <div class="btn-container">
+            <button id="startBtn">START</button>
+            <button id="resetBtn">RESET</button>
+        </div>
+    </div>
+
+    <div class="duration-display" id="durationDisplay">Estimated Time: --:--</div>
+
+    <div class="viewport">
+        <div class="scroller-strip" id="strip">
+            <div class="pattern-row muted" id="row-prev">-</div>
+            <div class="pattern-row" id="row-curr">-</div>
+            <div class="pattern-row muted" id="row-next">-</div>
+            <div class="pattern-row muted" id="row-future">-</div>
+        </div>
+    </div>
+
+    <div class="tracker" id="tracker">-</div>
+</div>
+
+<script>
+    const lines = [
+        "RLRL RLRL RLRL RLRL", "LRLR LRLR LRLR LRLR", "RRLL RRLL RRLL RRLL", "LLRR LLRR LLRR LLRR",
+        "RLRR LRLL RLRR LRLL", "RLLR LRRL RLLR LRRL", "RRLR LLRL RRLR LLRL", "RLRL LRLR RLRL LRLR",
+        "RRRL RRRL RRRL RRRL", "LLLR LLLR LLLR LLLR", "RLLL RLLL RLLL RLLL", "LRRR LRRR LRRR LRRR",
+        "RRRR LLLL RRRR LLLL", "RLRL RRLL RLRL RRLL", "LRLR LLRR LRLR LLRR", "RLRL RLRR LRLR LRLL",
+        "RLRL RLLR LRLR LRRL", "RLRL RRLR LRLR LLRL", "RLRL RRRL RLRL RRRL", "LRLR LLLR LRLR LLLR",
+        "RLRL RLLL RLRL RLLL", "LRLR LRRR LRLR LRRR", "RLRL RRRR LRLR LLLL", "RRLL RLRR LLRR LRLL"
+    ];
+
+    let currentIndex = 0;
+    let isPlaying = false;
+
+    let audioCtx = null;
+    let nextNoteTime = 0.0;
+    let timerId = null;
+    
+    let bpm = 100;
+    let loopsPerLine = 2;
+    let currentClickInLoop = 0;
+    let totalClicksRequiredForLine = 16;
+    
+    const ROW_HEIGHT = 80;
+
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const bpmInput = document.getElementById('bpm');
+    const loopsSelect = document.getElementById('loops');
+    const strip = document.getElementById('strip');
+    const durationDisplay = document.getElementById('durationDisplay');
+    
+    const rPrev = document.getElementById('row-prev');
+    const rCurr = document.getElementById('row-curr');
+    const rNext = document.getElementById('row-next');
+    const rFuture = document.getElementById('row-future');
+    const trackerDisplay = document.getElementById('tracker');
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    // Calculates and updates the playlist length layout
+    function calculateTotalDuration() {
+        bpm = Math.max(40, Math.min(250, parseInt(bpmInput.value) || 100));
+        loopsPerLine = parseInt(loopsSelect.value);
+        
+        const clicksPerLine = loopsPerLine * 8;
+        const totalClicks = (lines.length * clicksPerLine) + 4; // Adding the 4 count-in clicks
+        
+        const totalSeconds = (totalClicks / bpm) * 60;
+        
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = Math.floor(totalSeconds % 60);
+        
+        durationDisplay.textContent = `Total Time: ${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+    }
+
+    function updateDisplay(isCountIn = false, countNum = 0, visualClickIndex = 0) {
+        rPrev.textContent = currentIndex === 0 ? "" : lines[currentIndex - 1];
+        rCurr.textContent = lines[currentIndex];
+        rNext.textContent = lines[(currentIndex + 1) % lines.length];
+        rFuture.textContent = lines[(currentIndex + 2) % lines.length];
+        
+        if (isCountIn) {
+            rCurr.classList.add('counting');
+            trackerDisplay.textContent = `GET READY... ${countNum} / 4`;
+        } else {
+            rCurr.classList.remove('counting');
+            let currentLoopNum = Math.floor(visualClickIndex / 8) + 1;
+            let clickInCurrentLoop = (visualClickIndex % 8) + 1;
+            trackerDisplay.textContent = `LINE ${currentIndex + 1}/${lines.length} • LOOP ${currentLoopNum}/${loopsPerLine} • CLICK ${clickInCurrentLoop}`;
+        }
+    }
+
+    function playClick(time, frequency, duration = 0.04) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.frequency.setValueAtTime(frequency, time);
+        gain.gain.setValueAtTime(0.3, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+        
+        osc.start(time);
+        osc.stop(time + duration + 0.01);
+    }
+
+    function runCountIn(startTime) {
+        const beatDuration = 60.0 / bpm;
+        
+        for (let i = 0; i < 4; i++) {
+            const clickTime = startTime + (i * beatDuration);
+            playClick(clickTime, 1200, 0.05);
+            
+            setTimeout(() => {
+                if (!isPlaying) return;
+                updateDisplay(true, i + 1, 0);
+            }, (clickTime - audioCtx.currentTime) * 1000);
+        }
+
+        return startTime + (4 * beatDuration);
+    }
+
+    function scheduler() {
+        while (nextNoteTime < audioCtx.currentTime + 0.1) {
+            scheduleMainNote(currentClickInLoop, nextNoteTime);
+            advanceMainNote();
+        }
+        timerId = setTimeout(scheduler, 25.0);
+    }
+
+    function scheduleMainNote(clickCount, time) {
+        const isDownbeat = (clickCount % 8 === 0);
+        playClick(time, isDownbeat ? 880 : 440, 0.04);
+        
+        const beatDuration = 60.0 / bpm;
+
+        setTimeout(() => {
+            if (!isPlaying) return;
+            updateDisplay(false, 0, clickCount);
+            
+            if (clickCount === 0) {
+                const totalScrollTime = totalClicksRequiredForLine * beatDuration;
+                strip.style.transition = `transform ${totalScrollTime}s linear`;
+                strip.style.transform = `translateY(-${ROW_HEIGHT}px)`;
+            }
+        }, (time - audioCtx.currentTime) * 1000);
+    }
+
+    function advanceMainNote() {
+        currentClickInLoop++;
+        
+        if (currentClickInLoop >= totalClicksRequiredForLine) {
+            currentClickInLoop = 0;
+            currentIndex = (currentIndex + 1) % lines.length;
+            
+            setTimeout(() => {
+                if (!isPlaying) return;
+                strip.style.transition = "none";
+                strip.style.transform = `translateY(0px)`;
+                updateDisplay(false, 0, 0);
+            }, ((nextNoteTime - audioCtx.currentTime) * 1000) - 12);
+        }
+
+        nextNoteTime += (60.0 / bpm);
+    }
+
+    function start() {
+        initAudio();
+        if (isPlaying) return;
+        isPlaying = true;
+        
+        startBtn.textContent = 'STOP';
+        startBtn.classList.add('playing');
+        
+        bpm = parseInt(bpmInput.value);
+        loopsPerLine = parseInt(loopsSelect.value);
+        totalClicksRequiredForLine = loopsPerLine * 8;
+        
+        currentIndex = 0;
+        currentClickInLoop = 0;
+        
+        strip.style.transition = "none";
+        strip.style.transform = `translateY(0px)`;
+
+        const runTime = audioCtx.currentTime + 0.05;
+        const mainLoopStartTime = runCountIn(runTime);
+        
+        nextNoteTime = mainLoopStartTime;
+        
+        setTimeout(() => {
+            if (!isPlaying) return;
+            scheduler();
+        }, (mainLoopStartTime - audioCtx.currentTime) * 1000 - 15);
+    }
+
+    function stop() {
+        isPlaying = false;
+        startBtn.textContent = 'START';
+        startBtn.classList.remove('playing');
+        clearTimeout(timerId);
+        
+        strip.style.transition = "none";
+        strip.style.transform = `translateY(0px)`;
+        updateDisplay(false, 0, 0);
+    }
+
+    function resetAll() {
+        stop();
+        currentIndex = 0;
+        currentClickInLoop = 0;
+        updateDisplay(false, 0, 0);
+    }
+
+    startBtn.addEventListener('click', () => {
+        if (isPlaying) stop(); else start();
+    });
+
+    resetBtn.addEventListener('click', resetAll);
+
+    bpmInput.addEventListener('input', () => {
+        calculateTotalDuration();
+    });
+
+    loopsSelect.addEventListener('change', () => {
+        calculateTotalDuration();
+        if(!isPlaying) resetAll();
+    });
+
+    // Initial calculation on structural compilation pass
+    calculateTotalDuration();
+    updateDisplay(false, 0, 0);
+</script>
+</body>
+</html>

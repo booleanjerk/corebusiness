@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalist Layout Navigator</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text-dark: #111111;
+            --text-light: #aaaaaa;
+            --accent: #000000;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .row-container {
+            display: flex;
+            gap: 24px;
+            width: 100%;
+            max-width: 760px;
+            padding: 0 20px;
+            justify-content: center;
+        }
+
+        /* Styled anchor wrappers to mimic the original block setup */
+        .nav-link {
+            flex: 1;
+            text-decoration: none;
+            color: var(--text-dark);
+            outline: none;
+        }
+
+        .flex-box {
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 400;
+            letter-spacing: 1px;
+            transition: all 0.15s ease;
+        }
+
+        /* Clean hover states to stay true to the minimalist style */
+        .nav-link:hover .flex-box {
+            border-color: var(--text-dark);
+            background-color: #fafdff; /* Ultra-subtle lift */
+        }
+    </style>
+</head>
+<body>
+
+<div class="row-container">
+    <a href="schtick.html" class="nav-link">
+        <div class="flex-box">schtick</div>
+    </a>
+    <a href="p37.html" class="nav-link">
+        <div class="flex-box">p37</div>
+    </a>
+    <a href="table.html" class="nav-link">
+        <div class="flex-box">table</div>
+    </a>
+</div>
+
+</body>
+</html>
