@@ -45,11 +45,11 @@
         }
 
         .container {
-    width: 100%;
-    max-width: 760px;
-    text-align: center;
-    padding-top: 40px; /* Space for back button on mobile */
-}
+            width: 100%;
+            max-width: 760px;
+            text-align: center;
+            padding-top: 40px;
+        }
 
         .controls {
             display: flex;
@@ -157,7 +157,6 @@
             left: 0;
             width: 100%;
             transform: translateY(0px);
-            transition: transform 0s linear;
         }
 
         .pattern-row {
@@ -190,19 +189,19 @@
         }
 
         @media (max-width: 600px) {
-    .controls {
-        flex-wrap: wrap; /* Wraps inputs cleanly on thin viewports */
-        gap: 12px;
-    }
-    .pattern-row {
-        font-size: 1.2rem; /* Shrinks text slightly so long RLRR sequences fit */
-        letter-spacing: 1px;
-        word-spacing: 4px;
-    }
-    .pattern-row.muted {
-        font-size: 1rem;
-    }
-}
+            .controls {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+            .pattern-row {
+                font-size: 1.2rem;
+                letter-spacing: 1px;
+                word-spacing: 4px;
+            }
+            .pattern-row.muted {
+                font-size: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -290,13 +289,12 @@
         }
     }
 
-    // Calculates and updates the playlist length layout
     function calculateTotalDuration() {
         bpm = Math.max(40, Math.min(250, parseInt(bpmInput.value) || 100));
         loopsPerLine = parseInt(loopsSelect.value);
         
         const clicksPerLine = loopsPerLine * 8;
-        const totalClicks = (lines.length * clicksPerLine) + 4; // Adding the 4 count-in clicks
+        const totalClicks = (lines.length * clicksPerLine) + 4;
         
         const totalSeconds = (totalClicks / bpm) * 60;
         
@@ -306,21 +304,26 @@
         durationDisplay.textContent = `Total Time: ${minutes}m ${seconds.toString().padStart(2, '0')}s`;
     }
 
-    function updateDisplay(isCountIn = false, countNum = 0, visualClickIndex = 0) {
-        rPrev.textContent = currentIndex === 0 ? "" : lines[currentIndex - 1];
-        rCurr.textContent = lines[currentIndex];
-        rNext.textContent = lines[(currentIndex + 1) % lines.length];
-        rFuture.textContent = lines[(currentIndex + 2) % lines.length];
+    // Now index represents the exact "physically drawn" text step
+    function updateDisplayStatic(idx, visualClickIndex) {
+        rCurr.classList.remove('counting');
+        rPrev.textContent = idx === 0 ? "" : lines[idx - 1];
+        rCurr.textContent = lines[idx];
+        rNext.textContent = lines[(idx + 1) % lines.length];
+        rFuture.textContent = lines[(idx + 2) % lines.length];
         
-        if (isCountIn) {
-            rCurr.classList.add('counting');
-            trackerDisplay.textContent = `GET READY... ${countNum} / 4`;
-        } else {
-            rCurr.classList.remove('counting');
-            let currentLoopNum = Math.floor(visualClickIndex / 8) + 1;
-            let clickInCurrentLoop = (visualClickIndex % 8) + 1;
-            trackerDisplay.textContent = `LINE ${currentIndex + 1}/${lines.length} • LOOP ${currentLoopNum}/${loopsPerLine} • CLICK ${clickInCurrentLoop}`;
-        }
+        let currentLoopNum = Math.floor(visualClickIndex / 8) + 1;
+        let clickInCurrentLoop = (visualClickIndex % 8) + 1;
+        trackerDisplay.textContent = `LINE ${idx + 1}/${lines.length} • LOOP ${currentLoopNum}/${loopsPerLine} • CLICK ${clickInCurrentLoop}`;
+    }
+
+    function updateDisplayCountIn(countNum) {
+        rPrev.textContent = "";
+        rCurr.textContent = "GET READY...";
+        rNext.textContent = lines[0];
+        rFuture.textContent = lines[1];
+        rCurr.classList.add('counting');
+        trackerDisplay.textContent = `GET READY... ${countNum} / 4`;
     }
 
     function playClick(time, frequency, duration = 0.04) {
@@ -346,7 +349,7 @@
             
             setTimeout(() => {
                 if (!isPlaying) return;
-                updateDisplay(true, i + 1, 0);
+                updateDisplayCountIn(i + 1);
             }, (clickTime - audioCtx.currentTime) * 1000);
         }
 
@@ -355,13 +358,13 @@
 
     function scheduler() {
         while (nextNoteTime < audioCtx.currentTime + 0.1) {
-            scheduleMainNote(currentClickInLoop, nextNoteTime);
+            scheduleMainNote(currentClickInLoop, currentIndex, nextNoteTime);
             advanceMainNote();
         }
         timerId = setTimeout(scheduler, 25.0);
     }
 
-    function scheduleMainNote(clickCount, time) {
+    function scheduleMainNote(clickCount, stepIndex, time) {
         const isDownbeat = (clickCount % 8 === 0);
         playClick(time, isDownbeat ? 880 : 440, 0.04);
         
@@ -369,11 +372,19 @@
 
         setTimeout(() => {
             if (!isPlaying) return;
-            updateDisplay(false, 0, clickCount);
             
+            // Clean snap-back to top
             if (clickCount === 0) {
-                const totalScrollTime = totalClicksRequiredForLine * beatDuration;
-                strip.style.transition = `transform ${totalScrollTime}s linear`;
+                strip.style.transition = "none";
+                strip.style.transform = `translateY(0px)`;
+            }
+
+            // Sync text cleanly with the physical layout index
+            updateDisplayStatic(stepIndex, clickCount);
+            
+            // On the absolute last click, pull the next line into view using the snappy bezier curve
+            if (clickCount === totalClicksRequiredForLine - 1) {
+                strip.style.transition = `transform ${beatDuration}s cubic-bezier(0.25, 1, 0.5, 1)`;
                 strip.style.transform = `translateY(-${ROW_HEIGHT}px)`;
             }
         }, (time - audioCtx.currentTime) * 1000);
@@ -385,13 +396,6 @@
         if (currentClickInLoop >= totalClicksRequiredForLine) {
             currentClickInLoop = 0;
             currentIndex = (currentIndex + 1) % lines.length;
-            
-            setTimeout(() => {
-                if (!isPlaying) return;
-                strip.style.transition = "none";
-                strip.style.transform = `translateY(0px)`;
-                updateDisplay(false, 0, 0);
-            }, ((nextNoteTime - audioCtx.currentTime) * 1000) - 12);
         }
 
         nextNoteTime += (60.0 / bpm);
@@ -434,14 +438,14 @@
         
         strip.style.transition = "none";
         strip.style.transform = `translateY(0px)`;
-        updateDisplay(false, 0, 0);
+        updateDisplayStatic(0, 0);
     }
 
     function resetAll() {
         stop();
         currentIndex = 0;
         currentClickInLoop = 0;
-        updateDisplay(false, 0, 0);
+        updateDisplayStatic(0, 0);
     }
 
     startBtn.addEventListener('click', () => {
@@ -459,9 +463,8 @@
         if(!isPlaying) resetAll();
     });
 
-    // Initial calculation on structural compilation pass
     calculateTotalDuration();
-    updateDisplay(false, 0, 0);
+    updateDisplayStatic(0, 0);
 </script>
 </body>
 </html>
