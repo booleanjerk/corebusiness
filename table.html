@@ -101,6 +101,55 @@
             justify-content: center;
         }
 
+        /* --- SUBDIVISION TOGGLES --- */
+        .toggle-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-light);
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+
+        .toggles-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: center;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+
+        .toggle-label {
+            cursor: pointer;
+            font-size: 0.85rem;
+            user-select: none;
+        }
+
+        .toggle-label input {
+            display: none;
+        }
+
+        .toggle-box {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            line-height: 30px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            color: var(--text-dark);
+            background: none;
+            transition: all 0.15s ease;
+            box-sizing: border-box;
+        }
+
+        .toggle-label input:checked + .toggle-box {
+            background: var(--text-dark);
+            border-color: var(--text-dark);
+            color: var(--bg);
+        }
+
         select {
             font-family: inherit;
             background: none;
@@ -204,17 +253,11 @@
             text-align: center;
         }
         @media (max-width: 360px) {
-    .bpm-value {
-        font-size: 2.8rem;
-    }
-    .pattern-row {
-        font-size: 2.2rem;
-    }
-    select, button {
-        padding: 6px 12px; /* Pull down padding slightly for micro displays */
-        font-size: 0.8rem;
-    }
-}
+            .bpm-value { font-size: 2.8rem; }
+            .pattern-row { font-size: 2.2rem; }
+            select, button { padding: 6px 12px; font-size: 0.8rem; }
+            .toggle-box { width: 28px; height: 28px; line-height: 26px; font-size: 0.8rem; }
+        }
     </style>
 </head>
 <body>
@@ -228,6 +271,10 @@
         <div class="slider-wrapper">
             <input type="range" id="bpmSlider" min="40" max="100" value="50">
         </div>
+
+        <div class="toggle-title">Subdivisions</div>
+        <div class="toggles-container" id="togglesContainer">
+            </div>
 
         <div class="controls-row">
             <select id="loopsSelect">
@@ -254,7 +301,8 @@
 </div>
 
 <script>
-    const ladder = [1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+    // This will hold our dynamically built array
+    let ladder = [];
     
     let currentIndex = 0;
     let isPlaying = false;
@@ -263,7 +311,7 @@
     let timerId = null;
 
     let bpm = 50;
-    let clicksPerSubdivision = 4; // Defaulting to 1 Bar (4 Clicks)
+    let clicksPerSubdivision = 4; 
     let currentClickInSubdivision = 0;
     
     const ROW_HEIGHT = 80;
@@ -274,12 +322,54 @@
     const bpmDisplay = document.getElementById('bpmDisplay');
     const loopsSelect = document.getElementById('loopsSelect');
     const strip = document.getElementById('strip');
+    const togglesContainer = document.getElementById('togglesContainer');
     
     const rPrev = document.getElementById('row-prev');
     const rCurr = document.getElementById('row-curr');
     const rNext = document.getElementById('row-next');
     const rFuture = document.getElementById('row-future');
     const trackerDisplay = document.getElementById('tracker');
+
+    // Generate the UI checkboxes for subdivisions 1 to 9
+    function setupToggles() {
+        for (let i = 1; i <= 9; i++) {
+            const label = document.createElement('label');
+            label.className = 'toggle-label';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = i;
+            checkbox.checked = true; // Default all to checked to match your original sequence
+            checkbox.addEventListener('change', () => {
+                buildLadder();
+                resetAll();
+            });
+
+            const box = document.createElement('div');
+            box.className = 'toggle-box';
+            box.textContent = i;
+
+            label.appendChild(checkbox);
+            label.appendChild(box);
+            togglesContainer.appendChild(label);
+        }
+    }
+
+    // Build the climbing and descending ladder sequence dynamically based on checked options
+    function buildLadder() {
+        const checkedBoxes = Array.from(togglesContainer.querySelectorAll('input:checked'));
+        const activeValues = checkedBoxes.map(cb => parseInt(cb.value)).sort((a, b) => a - b);
+        
+        if (activeValues.length === 0) {
+            ladder = [1]; // Fallback if everything is unchecked
+            return;
+        }
+
+        // Build palindrome sequence: up then down. E.g., [1,3,5] becomes [1,3,5,3,1]
+        const climbing = [...activeValues];
+        const descending = [...activeValues].reverse().slice(1, -1);
+        ladder = climbing.concat(descending);
+    }
 
     function initAudio() {
         if (!audioCtx) {
@@ -293,6 +383,7 @@
     }
 
     function updateDisplayStatic(idx, clickCount) {
+        if (ladder.length === 0) return;
         rCurr.classList.remove('counting');
         rPrev.textContent = idx === 0 ? "" : getLadderValue(idx - 1);
         rCurr.textContent = getLadderValue(idx);
@@ -452,6 +543,8 @@
     });
 
     // Initialize layout setup pass
+    setupToggles();
+    buildLadder();
     updateDisplayStatic(0, 0);
 </script>
 </body>
